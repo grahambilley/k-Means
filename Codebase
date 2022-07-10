@@ -1,0 +1,83 @@
+import warnings
+warnings.filterwarnings('ignore')
+
+import time
+import pandas as pd
+import numpy as np
+import scipy.sparse.linalg as ll
+import matplotlib.pyplot as plt
+
+'''
+0. Rewrite K-Means functions from Homework 1
+1. Read and clean the data.
+2. Create the Laplacian matrix.
+3. Calculate the eigen decomposition and sort based on smallest eigenvalues.
+4. Run k-means on the 2 smallest eigenvalues to classify the data.
+'''
+
+##################################################################
+# Rewrite K-Means Code from HW 1
+##################################################################
+
+# Step 1. initialize the means.
+def initialize_means(data, K, rand_seed=1):
+    np.random.seed(rand_seed)
+    means = np.random.choice(len(data), replace=False, size=K)
+    return data[means, :]
+
+# Step 2. Calculate distances from each point to the mean of each cluster
+def calculate_distances_to_means(data, means, l_norm=2):
+    num_points = len(data)
+    K = len(means)
+    dists = np.zeros((num_points, K))
+    for i in range(num_points):
+        dist = np.linalg.norm(data[i,:] - means, axis=1, ord=l_norm)
+        dists[i,:] = dist**l_norm
+    return dists
+
+# Step 3. Assign each data point to a cluster based on the distances calculated in step 3.
+def assign_each_point_to_closest_mean(dists):
+    return np.argmin(dists, axis=1)
+    
+# Step 4. Update the means based on the fixed cluster assignments.
+def update_means(data, means, l_norm=2):
+    new_means = np.zeros(means.shape)
+    distances = calculate_distances_to_means(data, means, l_norm)
+    labels = assign_each_point_to_closest_mean(distances)
+    
+    for cluster in set(labels):
+        points_in_cluster = np.array([data[j] for j in range(len(data)) if labels[j] == cluster])
+        new_means[cluster] = np.mean(points_in_cluster, axis=0)
+
+    return new_means
+
+# Step 5. 
+def check_for_convergence(means, new_means):
+    return np.array_equal(means, new_means)
+
+# Putting it all together.
+def k_means(data, K, max_iterations = 10, l_norm = 2):
+    print('Running k_means...')
+    t0 = time.time()
+    converged = False
+    means = initialize_means(data, K)
+    iteration = 1
+    
+    while (not converged) and (iteration < max_iterations):
+
+        distances = calculate_distances_to_means(data, means, l_norm)
+        labels = assign_each_point_to_closest_mean(distances)
+        new_means = update_means(data, means)
+        
+        converged = check_for_convergence(means, new_means)
+        means = new_means
+        iteration += 1
+
+    t1 = time.time()
+    runtime = round(t1-t0)
+    
+    return labels, means, iteration, runtime
+        
+##################################################################
+# End of K-Means code
+##################################################################
